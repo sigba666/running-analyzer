@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>러닝 자세 분석기</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Apple SD Gothic Neo,sans-serif;background:#f8fafc;color:#1a202c;min-height:100vh}
+
+#upload-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.upload-wrap{width:100%;max-width:440px}
+.top-badge{display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:.78rem;font-weight:600;padding:5px 14px;border-radius:99px;margin-bottom:16px}
+.upload-wrap h1{font-size:1.75rem;font-weight:700;color:#0f172a;margin-bottom:6px}
+.upload-wrap .subtitle{font-size:.9rem;color:#64748b;margin-bottom:28px}
+.drop-zone{border:1.5px solid #e2e8f0;border-radius:14px;padding:36px 24px;text-align:center;background:#fff;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:16px}
+.drop-zone:hover,.drop-zone.drag{border-color:#3b82f6;background:#f0f7ff}
+.drop-zone input[type=file]{display:none}
+.drop-icon{font-size:2.4rem;margin-bottom:12px;display:block}
+.drop-text{font-size:.92rem;color:#475569;font-weight:500}
+.drop-sub{font-size:.78rem;color:#94a3b8;margin-top:6px}
+.format-tags{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.fmt{background:#f1f5f9;border-radius:99px;font-size:.7rem;padding:3px 10px;color:#64748b;font-weight:500}
+#file-name{text-align:center;font-size:.82rem;color:#3b82f6;margin-top:8px;min-height:20px}
+.opts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.opt-group label{display:block;font-size:.75rem;color:#64748b;font-weight:500;margin-bottom:5px}
+.opt-group input,.opt-group select{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:.88rem;background:#fff;color:#1a202c;transition:border-color .15s}
+.opt-group input:focus,.opt-group select:focus{outline:none;border-color:#3b82f6}
+.start-btn{width:100%;padding:13px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;transition:background .15s}
+.start-btn:hover{background:#1e40af}
+.start-btn:disabled{background:#94a3b8;cursor:default}
+
+#progress-page{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+.progress-wrap{width:100%;max-width:440px;text-align:center}
+.prog-icon{font-size:2.8rem;margin-bottom:20px;display:block}
+.progress-wrap h2{font-size:1.1rem;font-weight:600;color:#0f172a;margin-bottom:6px}
+.prog-bg{background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;margin:16px 0 8px}
+.prog-fill{height:100%;background:#3b82f6;border-radius:99px;transition:width .4s;width:0%}
+#prog-label{font-size:.82rem;color:#64748b}
+
+#result-page{display:none}
+.result-header{background:#0f172a;color:#fff;padding:20px 28px;display:flex;align-items:center;justify-content:space-between}
+.result-header h1{font-size:1.1rem;font-weight:600}
+.back-btn{font-size:.8rem;color:#94a3b8;cursor:pointer;border:0.5px solid #334155;padding:5px 12px;border-radius:6px;background:transparent}
+.back-btn:hover{color:#fff;border-color:#64748b}
+.result-body{max-width:680px;margin:0 auto;padding:24px 16px}
+
+.score-banner{background:#1d4ed8;color:#fff;border-radius:14px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sb-label{font-size:.8rem;opacity:.7}
+.sb-meta{font-size:.72rem;opacity:.5;margin-top:2px}
+.sb-score{font-size:3rem;font-weight:800;letter-spacing:-2px}
+.sb-score span{font-size:1rem;font-weight:400;opacity:.65}
+
+.action-row{display:flex;gap:8px;margin-bottom:16px}
+.act-btn{flex:1;padding:10px 8px;border-radius:9px;border:1.5px solid #e2e8f0;background:#fff;font-size:.82rem;cursor:pointer;color:#475569;font-weight:500;transition:all .15s;text-align:center}
+.act-btn:hover{border-color:#3b82f6;color:#1d4ed8}
+.act-btn.primary{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.act-btn.primary:hover{background:#1d4ed8}
+
+.metric-card{background:#fff;border-radius:12px;margin-bottom:8px;overflow:hidden;border:1.5px solid #f1f5f9;transition:border-color .15s}
+.metric-card.expanded{border-color:#3b82f6}
+.metric-row{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none}
+.metric-row:hover{background:#f8fafc}
+.m-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.m-main{flex:1;min-width:0}
+.m-name{font-size:.75rem;color:#64748b;margin-bottom:2px}
+.m-val{font-size:.9rem;font-weight:600;color:#0f172a}
+.m-ref{font-size:.68rem;color:#94a3b8;font-weight:400;margin-left:3px}
+.gauge-wrap{flex-shrink:0;width:110px}
+.gauge-track{width:100%;height:6px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-bottom:4px}
+.gauge-fill{height:100%;border-radius:99px;transition:width .7s ease}
+.gauge-nums{display:flex;justify-content:space-between;font-size:.62rem;color:#cbd5e1}
+.m-badge{font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:99px;flex-shrink:0;margin-left:4px}
+.ok{background:#dcfce7;color:#166534}
+.warn{background:#fef9c3;color:#854d0e}
+.bad{background:#fee2e2;color:#991b1b}
+.expand-arrow{color:#cbd5e1;font-size:.8rem;flex-shrink:0;margin-left:2px;transition:transform .2s}
+.metric-card.expanded .expand-arrow{transform:rotate(180deg)}
+
+.chart-panel{display:none;padding:0 16px 16px;border-top:1px solid #f8fafc}
+.metric-card.expanded .chart-panel{display:block}
+.lr-legend{display:flex;gap:12px;font-size:.72rem;color:#64748b;margin:10px 0 4px}
+.lr-legend span{display:flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* 존 게이지 */
+.zone-section{margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9}
+.zone-section-title{font-size:.72rem;color:#64748b;font-weight:500;margin-bottom:8px}
+.zone-bar-outer{position:relative;margin-bottom:18px}
+.zone-bar{display:flex;height:10px;border-radius:99px;overflow:hidden}
+.zone-marker-row{position:relative;height:0}
+.z-marker{position:absolute;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;top:-22px}
+.z-marker-label{background:#0f172a;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px}
+.z-marker-line{width:2px;height:14px;background:#0f172a}
+.zone-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.zone-legend span{display:flex;align-items:center;gap:4px;font-size:.68rem;color:#64748b}
+.zl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.z-key-labels{display:flex;justify-content:space-between;font-size:.64rem;color:#94a3b8;margin-top:3px;padding:0 2px}
+
+/* 수치 비교 */
+.compare-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.cmp{border-radius:8px;padding:9px 8px;text-align:center}
+.cmp .cv{font-size:1rem;font-weight:700;margin-bottom:1px}
+.cmp .cl{font-size:.68rem}
+.cmp-my{background:#eff6ff;border:0.5px solid #bfdbfe}
+.cmp-my .cv{color:#1d4ed8} .cmp-my .cl{color:#3b82f6}
+.cmp-ok{background:#f0fdf4;border:0.5px solid #bbf7d0}
+.cmp-ok .cv{color:#166534} .cmp-ok .cl{color:#16a34a}
+.cmp-diff-good{background:#f0fdf4;border:0.5px solid #bbf7d0}
+.cmp-diff-good .cv{color:#166534} .cmp-diff-good .cl{color:#16a34a}
+.cmp-diff-warn{background:#fefce8;border:0.5px solid #fde68a}
+.cmp-diff-warn .cv{color:#854d0e} .cmp-diff-warn .cl{color:#ca8a04}
+.cmp-diff-bad{background:#fef2f2;border:0.5px solid #fecaca}
+.cmp-diff-bad .cv{color:#991b1b} .cmp-diff-bad .cl{color:#dc2626}
+.diff-msg{margin-top:8px;font-size:.78rem;color:#475569;padding:8px 10px;background:#f8fafc;border-radius:7px;border-left:3px solid #e2e8f0;line-height:1.55}
+.diff-msg.msg-ok{border-left-color:#22c55e;background:#f0fdf4;color:#166534}
+.diff-msg.msg-warn{border-left-color:#f59e0b;background:#fffbeb;color:#854d0e}
+.diff-msg.msg-bad{border-left-color:#ef4444;background:#fef2f2;color:#991b1b}
+
+.info-box{margin-top:10px;padding:9px 12px;background:#f8fafc;border-radius:7px;font-size:.76rem;color:#475569;line-height:1.65;border-left:3px solid #e2e8f0}
+.info-box .cite{color:#3b82f6;font-size:.68rem;display:block;margin-top:2px}
+
+.heatmap-section{margin:14px 0}
+.heatmap-label{font-size:.75rem;color:#64748b;margin-bottom:6px}
+.heatmap-bar{height:14px;border-radius:6px;overflow:hidden;display:flex}
+.hm-seg{flex:1}
+
+.tips-box{background:#fffbeb;border-left:3px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-top:14px}
+.tips-box h3{font-size:.84rem;font-weight:600;color:#92400e;margin-bottom:6px}
+.tips-box li{font-size:.82rem;color:#78350f;line-height:1.6;margin-left:16px}
+.all-good{background:#f0fdf4;border-left:3px solid #22c55e;border-radius:10px;padding:14px 16px;margin-top:14px;font-size:.88rem;color:#166534}
+</style>
+</head>
+<body>
+
+<!-- 업로드 -->
+<div id="upload-page">
+  <div class="upload-wrap">
+    <div class="top-badge">🏃 AI 자세 분석</div>
+    <h1>러닝 자세 분석기</h1>
+    <p class="subtitle">영상 하나로 6가지 지표를 자동으로 분석합니다</p>
+    <div class="drop-zone" id="dropzone">
+      <input type="file" id="fileInput" accept="video/*">
+      <span class="drop-icon">🎬</span>
+      <div class="drop-text">영상을 드래그하거나 클릭하세요</div>
+      <div class="drop-sub">측면에서 촬영한 영상이 가장 정확합니다</div>
+      <div class="format-tags">
+        <span class="fmt">mp4</span><span class="fmt">mov</span>
+        <span class="fmt">avi</span><span class="fmt">mkv</span>
+      </div>
+    </div>
+    <div id="file-name"></div>
+    <div class="opts-row">
+      <div class="opt-group">
+        <label>신장 (cm)</label>
+        <input type="number" id="heightInput" value="170" min="140" max="220">
+      </div>
+      <div class="opt-group">
+        <label>달리기 속도</label>
+        <select id="speedSelect">
+          <option value="slow">느린 조깅 (~8 km/h)</option>
+          <option value="normal" selected>일반 러닝 (8~12)</option>
+          <option value="fast">빠른 러닝 (12+)</option>
+        </select>
+      </div>
+    </div>
+    <button class="start-btn" id="uploadBtn" disabled>분석 시작</button>
+  </div>
+</div>
+
+<!-- 진행 -->
+<div id="progress-page">
+  <div class="progress-wrap">
+    <span class="prog-icon">⚙️</span>
+    <h2 id="prog-title">분석 중입니다…</h2>
+    <div class="prog-bg"><div class="prog-fill" id="progressBar"></div></div>
+    <p id="prog-label">준비 중…</p>
+  </div>
+</div>
+
+<!-- 결과 -->
+<div id="result-page">
+  <div class="result-header">
+    <h1>🏃 분석 결과</h1>
+    <button class="back-btn" onclick="resetAll()">← 새 영상 분석</button>
+  </div>
+  <div class="result-body">
+    <div class="score-banner">
+      <div>
+        <div class="sb-label">종합 자세 점수</div>
+        <div class="sb-meta" id="result-meta"></div>
+      </div>
+      <div class="sb-score" id="overall-score">—<span> / 100</span></div>
+    </div>
+
+    <div class="action-row">
+      <button class="act-btn primary" id="downloadOverlayBtn" style="display:none" onclick="downloadOverlay()">📹 분석 영상 다운로드</button>
+      <button class="act-btn" onclick="saveScreenshot()">🖼 결과 저장</button>
+    </div>
+
+    <!-- 무릎 -->
+    <div class="metric-card" id="card-knee">
+      <div class="metric-row" onclick="toggle('knee')">
+        <div class="m-icon" style="background:#dbeafe">🦵</div>
+        <div class="m-main">
+          <div class="m-name">무릎 각도</div>
+          <div class="m-val" id="val-knee">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-knee"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-knee">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div class="lr-legend">
+          <span><span class="dot" style="background:#3b82f6"></span>오른쪽</span>
+          <span><span class="dot" style="background:#ef4444"></span>왼쪽</span>
+        </div>
+        <canvas id="chart-knee" height="100"></canvas>
+        <div style="margin-top:8px;font-size:.76rem;color:#64748b">
+          좌우 비대칭: <strong id="asym-knee">—</strong>°
+          <span class="m-badge" id="asym-knee-badge" style="font-size:.66rem;margin-left:4px"></span>
+        </div>
+        <div id="zone-knee"></div>
+        <div class="info-box">무릎이 디딤발에서 얼마나 펴지는지를 나타냅니다. 너무 굽히면 착지 충격이 커집니다.
+          <span class="cite">Novacheck (1998), Gait &amp; Posture</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 허리 -->
+    <div class="metric-card" id="card-trunk">
+      <div class="metric-row" onclick="toggle('trunk')">
+        <div class="m-icon" style="background:#e0f2fe">🧍</div>
+        <div class="m-main">
+          <div class="m-name">허리 기울기</div>
+          <div class="m-val" id="val-trunk">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-trunk"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-trunk">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div class="lr-legend">
+          <span><span class="dot" style="background:#3b82f6"></span>오른쪽</span>
+          <span><span class="dot" style="background:#ef4444"></span>왼쪽</span>
+        </div>
+        <canvas id="chart-trunk" height="100"></canvas>
+        <div id="zone-trunk"></div>
+        <div class="info-box">상체가 수직에서 앞으로 얼마나 기울었는지를 나타냅니다.
+          <span class="cite">Anderson (1996), Sports Medicine</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 케이던스 -->
+    <div class="metric-card" id="card-cadence">
+      <div class="metric-row" onclick="toggle('cadence')">
+        <div class="m-icon" style="background:#fce7f3">👟</div>
+        <div class="m-main">
+          <div class="m-name">케이던스 (분당 보폭수)</div>
+          <div class="m-val" id="val-cadence">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-cadence"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-cadence">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div style="font-size:.76rem;color:#64748b;margin:10px 0 6px">발 착지 시점 (파랑=오른발 · 빨강=왼발)</div>
+        <canvas id="chart-cadence" height="60"></canvas>
+        <div id="zone-cadence"></div>
+        <div class="info-box">1분 동안 발이 지면에 닿는 횟수입니다. 낮으면 보폭이 커서 부상 위험이 높아집니다.
+          <span class="cite">Heiderscheit et al. (2011), Med Sci Sports Exerc</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수직 진동 -->
+    <div class="metric-card" id="card-vosc">
+      <div class="metric-row" onclick="toggle('vosc')">
+        <div class="m-icon" style="background:#ede9fe">↕️</div>
+        <div class="m-main">
+          <div class="m-name">수직 진동</div>
+          <div class="m-val" id="val-vosc">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-vosc"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-vosc">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div style="font-size:.76rem;color:#64748b;margin:10px 0 6px">엉덩이 상하 진동 추이</div>
+        <canvas id="chart-vosc" height="80"></canvas>
+        <div id="zone-vosc"></div>
+        <div class="info-box">달릴 때 몸이 얼마나 상하로 움직이는지입니다. 클수록 에너지 낭비가 심합니다.
+          <span class="cite">Moore (2016), Sports Medicine</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 좌우 대칭 -->
+    <div class="metric-card" id="card-sym">
+      <div class="metric-row" onclick="toggle('sym')">
+        <div class="m-icon" style="background:#d1fae5">⚖️</div>
+        <div class="m-main">
+          <div class="m-name">좌우 대칭</div>
+          <div class="m-val" id="val-sym">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-sym"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-sym">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div style="font-size:.76rem;color:#64748b;margin:10px 0 6px">무릎 좌우 비대칭 추이 (기준선 15°)</div>
+        <canvas id="chart-sym" height="80"></canvas>
+        <div id="zone-sym"></div>
+        <div class="info-box">좌우 무릎 각도 차이입니다. 클수록 한쪽 관절에 부하가 집중됩니다.</div>
+      </div>
+    </div>
+
+    <!-- 팔 스윙 -->
+    <div class="metric-card" id="card-arm">
+      <div class="metric-row" onclick="toggle('arm')">
+        <div class="m-icon" style="background:#fef3c7">💪</div>
+        <div class="m-main">
+          <div class="m-name">팔 스윙 대칭</div>
+          <div class="m-val" id="val-arm">—</div>
+        </div>
+        <div class="gauge-wrap">
+          <div class="gauge-track"><div class="gauge-fill" id="gauge-arm"></div></div>
+          <div class="gauge-nums"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+        <span class="m-badge" id="badge-arm">—</span>
+        <span class="expand-arrow">▼</span>
+      </div>
+      <div class="chart-panel">
+        <div class="lr-legend">
+          <span><span class="dot" style="background:#3b82f6"></span>오른팔</span>
+          <span><span class="dot" style="background:#ef4444"></span>왼팔</span>
+        </div>
+        <canvas id="chart-arm" height="80"></canvas>
+        <div id="zone-arm"></div>
+        <div class="info-box">팔꿈치 각도의 좌우 차이입니다. 비대칭이 클수록 불필요한 몸통 회전이 생깁니다.</div>
+      </div>
+    </div>
+
+    <div class="heatmap-section">
+      <div class="heatmap-label">자세 불량도 타임라인 — 초록: 양호 · 빨강: 나쁨</div>
+      <div class="heatmap-bar" id="heatmap-bar"></div>
+    </div>
+    <div id="tips-box"></div>
+    <div style="height:32px"></div>
+  </div>
+</div>
+
+<script>
+/* ── 지표별 기준 범위 정의 ────────────────────────────────── */
+const METRIC_RANGES = {
+  knee: {
+    label:'무릎 각도', unit:'°',
+    min:100, max:180,
+    zones:[
+      {end:130, c:'#fca5a5', label:'위험'},
+      {end:145, c:'#fde68a', label:'주의'},
+      {end:170, c:'#86efac', label:'정상'},
+      {end:175, c:'#fde68a', label:'주의'},
+      {end:180, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'145~170°',
+    keyLabels:['100','130','145','정상(145~170)','175','180'],
+    keyPositions:[0, 37.5, 56.25, 75, 93.75, 100],
+    getMessage(v){
+      if(v>=145&&v<=170) return {cls:'msg-ok', text:`✅ 정상 범위(145~170°) 내에 있습니다.`};
+      if(v>=130&&v<145)  return {cls:'msg-warn',text:`⚠️ 무릎이 조금 굽혀져 있습니다. 정상보다 ${(145-v).toFixed(1)}° 낮습니다.`};
+      if(v>170&&v<=175)  return {cls:'msg-warn',text:`⚠️ 무릎이 약간 과신전 상태입니다.`};
+      if(v<130)          return {cls:'msg-bad', text:`❌ 무릎 굽힘이 과도합니다. 보폭과 착지 자세를 점검하세요.`};
+      return {cls:'msg-bad',text:`❌ 측정값이 정상 범위를 벗어났습니다.`};
+    }
+  },
+  trunk: {
+    label:'허리 기울기', unit:'°',
+    min:0, max:25,
+    zones:[
+      {end:3,  c:'#fde68a', label:'주의(적음)'},
+      {end:12, c:'#86efac', label:'정상'},
+      {end:20, c:'#fde68a', label:'주의'},
+      {end:25, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'3~12°',
+    getMessage(v){
+      if(v>=3&&v<=12)  return {cls:'msg-ok',  text:`✅ 정상 범위(3~12°) 내에 있습니다.`};
+      if(v>12&&v<=20)  return {cls:'msg-warn', text:`⚠️ 허리가 다소 기울어져 있습니다. 정상보다 ${(v-12).toFixed(1)}° 높습니다.`};
+      if(v<3)          return {cls:'msg-warn', text:`⚠️ 상체가 너무 수직입니다. 약간의 전경이 효율적입니다.`};
+      return {cls:'msg-bad', text:`❌ 허리 기울기가 과도합니다. 코어 강화가 필요합니다.`};
+    }
+  },
+  cadence: {
+    label:'케이던스', unit:' spm',
+    min:140, max:210,
+    zones:[
+      {end:155, c:'#fca5a5', label:'위험'},
+      {end:165, c:'#fde68a', label:'주의'},
+      {end:185, c:'#86efac', label:'정상'},
+      {end:200, c:'#fde68a', label:'주의'},
+      {end:210, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'165~185 spm',
+    getMessage(v){
+      if(v>=165&&v<=185) return {cls:'msg-ok',  text:`✅ 정상 범위(165~185 spm) 내에 있습니다.`};
+      if(v>=155&&v<165)  return {cls:'msg-warn', text:`⚠️ 케이던스가 낮습니다. 정상보다 ${(165-v).toFixed(0)} spm 부족합니다.`};
+      if(v>185&&v<=200)  return {cls:'msg-warn', text:`⚠️ 케이던스가 다소 높습니다.`};
+      if(v<155)          return {cls:'msg-bad',  text:`❌ 케이던스가 매우 낮습니다. 보폭을 줄이고 회전수를 늘리세요.`};
+      return {cls:'msg-bad', text:`❌ 케이던스가 너무 높습니다.`};
+    }
+  },
+  vosc: {
+    label:'수직 진동', unit:' cm',
+    min:0, max:18,
+    zones:[
+      {end:4,  c:'#fde68a', label:'주의(적음)'},
+      {end:12, c:'#86efac', label:'정상'},
+      {end:15, c:'#fde68a', label:'주의'},
+      {end:18, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'4~12 cm',
+    getMessage(v){
+      if(v>=4&&v<=12)  return {cls:'msg-ok',  text:`✅ 정상 범위(4~12 cm) 내에 있습니다.`};
+      if(v>12&&v<=15)  return {cls:'msg-warn', text:`⚠️ 수직 진동이 다소 큽니다. 정상보다 ${(v-12).toFixed(1)} cm 높습니다.`};
+      if(v<4)          return {cls:'msg-warn', text:`⚠️ 수직 진동이 너무 작습니다. 보폭이 너무 짧을 수 있습니다.`};
+      return {cls:'msg-bad', text:`❌ 수직 진동이 과도합니다. 상하 바운싱을 줄이세요.`};
+    }
+  },
+  sym: {
+    label:'좌우 비대칭', unit:'°',
+    min:0, max:30,
+    zones:[
+      {end:10, c:'#86efac', label:'정상'},
+      {end:20, c:'#fde68a', label:'주의'},
+      {end:30, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'0~10°',
+    getMessage(v){
+      if(v<=10)       return {cls:'msg-ok',  text:`✅ 좌우 대칭이 양호합니다 (${v.toFixed(1)}°).`};
+      if(v<=20)       return {cls:'msg-warn', text:`⚠️ 좌우 차이가 있습니다. 정상보다 ${(v-10).toFixed(1)}° 높습니다.`};
+      return {cls:'msg-bad', text:`❌ 좌우 비대칭이 심합니다. 균형 훈련이 필요합니다.`};
+    }
+  },
+  arm: {
+    label:'팔 스윙 비대칭', unit:'°',
+    min:0, max:40,
+    zones:[
+      {end:15, c:'#86efac', label:'정상'},
+      {end:25, c:'#fde68a', label:'주의'},
+      {end:40, c:'#fca5a5', label:'위험'},
+    ],
+    normal:'0~15°',
+    getMessage(v){
+      if(v<=15)  return {cls:'msg-ok',  text:`✅ 팔 스윙이 균형적입니다 (${v.toFixed(1)}°).`};
+      if(v<=25)  return {cls:'msg-warn', text:`⚠️ 팔 스윙 비대칭이 있습니다. 의식적으로 균형을 맞춰보세요.`};
+      return {cls:'msg-bad', text:`❌ 팔 스윙 비대칭이 심합니다. 불필요한 몸통 회전이 생길 수 있습니다.`};
+    }
+  }
+};
+
+/* ── 존 게이지 렌더링 ────────────────────────────────────── */
+function renderZone(containerId, metricKey, userValue) {
+  const cfg = METRIC_RANGES[metricKey];
+  if(!cfg) return;
+  const container = document.getElementById(containerId);
+  if(!container) return;
+
+  const total = cfg.max - cfg.min;
+  // 존 바 세그먼트
+  let segments = '';
+  let prev = cfg.min;
+  cfg.zones.forEach(z => {
+    const pct = ((z.end - prev) / total * 100).toFixed(2);
+    segments += `<div style="flex:${pct};background:${z.c}"></div>`;
+    prev = z.end;
+  });
+
+  // 마커 위치
+  const rawPct = (userValue - cfg.min) / total * 100;
+  const pct = Math.max(2, Math.min(97, rawPct));
+
+  // 수치 비교
+  const msg = cfg.getMessage(userValue);
+  const diffVal = userValue - parseFloat(cfg.normal.split('~')[0]);
+  const diffStr = diffVal >= 0 ? `+${diffVal.toFixed(1)}` : `${diffVal.toFixed(1)}`;
+  const diffClass = msg.cls==='msg-ok'?'cmp-diff-good':msg.cls==='msg-warn'?'cmp-diff-warn':'cmp-diff-bad';
+
+  container.innerHTML = `
+    <div class="zone-section">
+      <div class="zone-section-title">정상 범위 비교</div>
+      <div class="zone-bar-outer">
+        <div class="zone-bar">${segments}</div>
+        <div class="zone-marker-row">
+          <div class="z-marker" style="left:${pct}%">
+            <div class="z-marker-label">${userValue.toFixed(1)}${cfg.unit.trim()}</div>
+            <div class="z-marker-line"></div>
+          </div>
+        </div>
+        <div class="zone-legend" style="margin-top:8px">
+          <span><span class="zl-dot" style="background:#86efac"></span>정상 ${cfg.normal}</span>
+          <span><span class="zl-dot" style="background:#fde68a"></span>주의</span>
+          <span><span class="zl-dot" style="background:#fca5a5"></span>위험</span>
+        </div>
+      </div>
+      <div class="compare-row">
+        <div class="cmp cmp-my"><div class="cv">${userValue.toFixed(1)}${cfg.unit.trim()}</div><div class="cl">내 수치</div></div>
+        <div class="cmp cmp-ok"><div class="cv">${cfg.normal}</div><div class="cl">정상 범위</div></div>
+        <div class="cmp ${diffClass}"><div class="cv">${diffStr}${cfg.unit.trim()}</div><div class="cl">차이</div></div>
+      </div>
+      <div class="diff-msg ${msg.cls}">${msg.text}</div>
+    </div>`;
+}
+
+/* ── 이벤트 / 업로드 ─────────────────────────────────────── */
+const uploadPage  = document.getElementById('upload-page');
+const progressPage= document.getElementById('progress-page');
+const resultPage  = document.getElementById('result-page');
+const dropzone    = document.getElementById('dropzone');
+const fileInput   = document.getElementById('fileInput');
+const uploadBtn   = document.getElementById('uploadBtn');
+const fileNameEl  = document.getElementById('file-name');
+const progressBar = document.getElementById('progressBar');
+const progLabel   = document.getElementById('prog-label');
+const progTitle   = document.getElementById('prog-title');
+let charts = {}, _rd = null;
+
+dropzone.addEventListener('click', e=>{if(!['INPUT','SELECT','BUTTON'].includes(e.target.tagName))fileInput.click();});
+dropzone.addEventListener('dragover', e=>{e.preventDefault();dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{e.preventDefault();dropzone.classList.remove('drag');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change', ()=>{if(fileInput.files[0])setFile(fileInput.files[0]);});
+
+function setFile(f){fileNameEl.textContent='📎 '+f.name;uploadBtn.disabled=false;uploadBtn._file=f;}
+
+uploadBtn.addEventListener('click', async ()=>{
+  const file=uploadBtn._file; if(!file) return;
+  uploadBtn.disabled=true;
+  uploadPage.style.display='none';
+  progressPage.style.display='flex';
+  progressBar.style.width='0%';
+  progLabel.textContent='업로드 중…';
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('height_cm',document.getElementById('heightInput').value);
+  fd.append('speed_level',document.getElementById('speedSelect').value);
+  const res=await fetch('/upload',{method:'POST',body:fd});
+  const data=await res.json();
+  if(!res.ok){alert(data.detail||'업로드 실패');resetAll();return;}
+  pollStatus(data.job_id);
+});
+
+async function pollStatus(jobId){
+  const res=await fetch('/status/'+jobId);
+  const data=await res.json();
+  if(data.total>0){
+    const pct=Math.round(data.progress/data.total*100);
+    progressBar.style.width=pct+'%';
+    progTitle.textContent=data.status==='overlay'?'오버레이 영상 생성 중…':'분석 중입니다…';
+    progLabel.textContent=data.status==='overlay'?'분석 완료, 영상 처리 중…':`${pct}% 완료 (${data.progress}/${data.total} 프레임)`;
+  }
+  if(data.status==='processing'||data.status==='overlay'){setTimeout(()=>pollStatus(jobId),800);}
+  else if(data.status==='done'){
+    progressBar.style.width='100%';
+    const r=await fetch('/result/'+jobId);
+    showResult(await r.json(),jobId);
+  } else {alert('오류: '+(data.result?.error||''));resetAll();}
+}
+
+function gColor(s){return s>=80?'#22c55e':s>=55?'#f59e0b':'#ef4444';}
+function bClass(s){return s>=80?'ok':s>=55?'warn':'bad';}
+function bText(s){return s>=80?'양호':s>=55?'주의':'부족';}
+function setBadge(id,s){const el=document.getElementById(id);el.textContent=bText(s);el.className='m-badge '+bClass(s);}
+function setGauge(id,s){const el=document.getElementById(id);el.style.width=s+'%';el.style.background=gColor(s);}
+
+function showResult(d,jobId){
+  progressPage.style.display='none';
+  resultPage.style.display='block';
+  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  document.querySelectorAll('.metric-card').forEach(c=>c.classList.remove('expanded'));
+  _rd=d;
+
+  const sc=d.scores;
+  const overall=Math.round(Object.values(sc).reduce((a,b)=>a+b,0)/Object.keys(sc).length);
+  document.getElementById('overall-score').innerHTML=overall+'<span> / 100</span>';
+  document.getElementById('result-meta').textContent=
+    `신장 ${d.height_cm}cm · ${{slow:'느린 조깅',normal:'일반 러닝',fast:'빠른 러닝'}[d.speed_level]} · ${d.duration_sec}초`;
+
+  const dlBtn=document.getElementById('downloadOverlayBtn');
+  dlBtn.style.display='block'; dlBtn.dataset.jobId=jobId;
+
+  const ideal=d.ideal;
+  const avgKnee=((d.r_knee_mean+d.l_knee_mean)/2);
+  const avgTrunk=((d.r_trunk_mean+d.l_trunk_mean)/2);
+
+  document.getElementById('val-knee').innerHTML=`R ${d.r_knee_mean}° / L ${d.l_knee_mean}°<span class="m-ref">정상 145~170°</span>`;
+  setGauge('gauge-knee',sc.knee); setBadge('badge-knee',sc.knee);
+  document.getElementById('asym-knee').textContent=d.knee_asymmetry_mean;
+  const akb=document.getElementById('asym-knee-badge');
+  akb.textContent=d.knee_asymmetric?'비대칭':'대칭'; akb.className='m-badge '+(d.knee_asymmetric?'bad':'ok');
+
+  document.getElementById('val-trunk').innerHTML=`R ${d.r_trunk_mean}° / L ${d.l_trunk_mean}°<span class="m-ref">정상 3~12°</span>`;
+  setGauge('gauge-trunk',sc.trunk); setBadge('badge-trunk',sc.trunk);
+
+  document.getElementById('val-cadence').innerHTML=`${d.cadence} spm<span class="m-ref">정상 165~185 spm</span>`;
+  setGauge('gauge-cadence',sc.cadence); setBadge('badge-cadence',sc.cadence);
+
+  document.getElementById('val-vosc').innerHTML=`${d.v_osc_cm} cm<span class="m-ref">정상 4~12 cm</span>`;
+  setGauge('gauge-vosc',sc.v_osc); setBadge('badge-vosc',sc.v_osc);
+
+  document.getElementById('val-sym').innerHTML=`무릎 차이 ${d.knee_asymmetry_mean}°<span class="m-ref">정상 0~10°</span>`;
+  setGauge('gauge-sym',sc.symmetry); setBadge('badge-sym',sc.symmetry);
+
+  document.getElementById('val-arm').innerHTML=`R ${d.r_arm_mean}° / L ${d.l_arm_mean}°<span class="m-ref">비대칭 정상 0~15°</span>`;
+  setGauge('gauge-arm',sc.arm_swing); setBadge('badge-arm',sc.arm_swing);
+
+  const hmBar=document.getElementById('heatmap-bar');
+  hmBar.innerHTML='';
+  d.chart.badness.forEach(v=>{
+    const seg=document.createElement('div'); seg.className='hm-seg';
+    const r=Math.round(255*Math.min(v*2,1)); const g=Math.round(255*Math.min((1-v)*2,1));
+    seg.style.background=`rgb(${r},${g},60)`; hmBar.appendChild(seg);
+  });
+
+  const tipsBox=document.getElementById('tips-box');
+  tipsBox.innerHTML=d.tips.length>0
+    ?'<div class="tips-box"><h3>📋 개선 제안</h3><ul>'+d.tips.map(t=>`<li>${t}</li>`).join('')+'</ul></div>'
+    :'<div class="all-good">🎉 전반적으로 안정적인 러닝 자세입니다!</div>';
+}
+
+function buildChart(key,d){
+  if(charts[key]) return;
+  const C=d.chart;
+  const lo={responsive:true,animation:false,plugins:{legend:{display:false}},
+    scales:{x:{display:false},y:{grid:{color:'#f8fafc'},ticks:{font:{size:10}}}}};
+
+  if(key==='knee') charts.knee=new Chart(document.getElementById('chart-knee'),{type:'line',
+    data:{labels:C.frames,datasets:[
+      {data:C.r_knee,borderColor:'#3b82f6',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+      {data:C.l_knee,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+      {data:C.frames.map(()=>160),borderColor:'#cbd5e1',borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false},
+    ]},options:{...lo,scales:{x:{display:false},y:{grid:{color:'#f8fafc'},title:{display:true,text:'각도(°)'},ticks:{font:{size:10}}}}}});
+
+  if(key==='trunk') charts.trunk=new Chart(document.getElementById('chart-trunk'),{type:'line',
+    data:{labels:C.frames,datasets:[
+      {data:C.r_trunk,borderColor:'#3b82f6',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+      {data:C.l_trunk,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+      {data:C.frames.map(()=>5),borderColor:'#cbd5e1',borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false},
+    ]},options:{...lo,scales:{x:{display:false},y:{grid:{color:'#f8fafc'},title:{display:true,text:'각도(°)'},ticks:{font:{size:10}}}}}});
+
+  if(key==='cadence'){
+    const sd=C.frames.map(()=>0);
+    C.r_strikes.forEach(f=>{const i=C.frames.indexOf(f);if(i>=0)sd[i]=1;});
+    C.l_strikes.forEach(f=>{const i=C.frames.indexOf(f);if(i>=0)sd[i]=-1;});
+    charts.cadence=new Chart(document.getElementById('chart-cadence'),{type:'bar',
+      data:{labels:C.frames,datasets:[{data:sd,
+        backgroundColor:sd.map(v=>v>0?'#3b82f6bb':v<0?'#ef4444bb':'transparent'),
+        borderWidth:0,barPercentage:1,categoryPercentage:1}]},
+      options:{responsive:true,animation:false,plugins:{legend:{display:false}},
+               scales:{x:{display:false},y:{display:false}}}});
+  }
+
+  if(key==='vosc') charts.vosc=new Chart(document.getElementById('chart-vosc'),{type:'line',
+    data:{labels:C.frames,datasets:[{
+      data:C.knee_asym.map((_,i)=>Math.sin(i*0.25)*d.v_osc_cm*0.5),
+      borderColor:'#8b5cf6',backgroundColor:'#8b5cf618',borderWidth:1.5,pointRadius:0,fill:true,tension:0.4}]},
+    options:{...lo,scales:{x:{display:false},y:{grid:{color:'#f8fafc'},title:{display:true,text:'진동(상대값)'},ticks:{font:{size:10}}}}}});
+
+  if(key==='sym') charts.sym=new Chart(document.getElementById('chart-sym'),{type:'line',
+    data:{labels:C.frames,datasets:[
+      {data:C.knee_asym,borderColor:'#8b5cf6',backgroundColor:'#8b5cf618',borderWidth:1.5,pointRadius:0,fill:true,tension:0.3},
+      {data:C.frames.map(()=>15),borderColor:'#ef4444aa',borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false},
+    ]},options:{...lo,scales:{x:{display:false},y:{min:0,grid:{color:'#f8fafc'},title:{display:true,text:'비대칭(°)'},ticks:{font:{size:10}}}}}});
+
+  if(key==='arm') charts.arm=new Chart(document.getElementById('chart-arm'),{type:'line',
+    data:{labels:C.frames,datasets:[
+      {data:C.r_arm,borderColor:'#3b82f6',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+      {data:C.l_arm,borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,fill:false,tension:0.3},
+    ]},options:{...lo,scales:{x:{display:false},y:{grid:{color:'#f8fafc'},title:{display:true,text:'팔꿈치 각도(°)'},ticks:{font:{size:10}}}}}});
+
+  // 존 게이지 렌더링
+  const zoneMap = {
+    knee:    {id:'zone-knee',    val:(_rd.r_knee_mean+_rd.l_knee_mean)/2},
+    trunk:   {id:'zone-trunk',   val:(_rd.r_trunk_mean+_rd.l_trunk_mean)/2},
+    cadence: {id:'zone-cadence', val:_rd.cadence},
+    vosc:    {id:'zone-vosc',    val:_rd.v_osc_cm},
+    sym:     {id:'zone-sym',     val:_rd.knee_asymmetry_mean},
+    arm:     {id:'zone-arm',     val:_rd.arm_swing_asymmetry},
+  };
+  if(zoneMap[key]) renderZone(zoneMap[key].id, key, zoneMap[key].val);
+}
+
+function toggle(key){
+  const card=document.getElementById('card-'+key);
+  const isOpen=card.classList.contains('expanded');
+  document.querySelectorAll('.metric-card').forEach(c=>c.classList.remove('expanded'));
+  if(!isOpen){card.classList.add('expanded');if(_rd)buildChart(key,_rd);}
+}
+
+function downloadOverlay(){window.location.href='/overlay/'+document.getElementById('downloadOverlayBtn').dataset.jobId;}
+function saveScreenshot(){alert('Cmd+Shift+4 (맥) 로 화면을 캡처해 저장해주세요.');}
+
+function resetAll(){
+  resultPage.style.display='none';
+  progressPage.style.display='none';
+  uploadPage.style.display='flex';
+  fileInput.value=''; fileNameEl.textContent='';
+  uploadBtn.disabled=true; uploadBtn._file=null;
+  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  _rd=null;
+  document.querySelectorAll('.metric-card').forEach(c=>c.classList.remove('expanded'));
+  document.getElementById('downloadOverlayBtn').style.display='none';
+  progressBar.style.width='0%';
+  progTitle.textContent='분석 중입니다…';
+}
+</script>
+</body>
+</html>
