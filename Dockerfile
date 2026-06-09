@@ -1,13 +1,11 @@
 FROM python:3.10-slim
 
-# 시스템 패키지 (OpenCV, MediaPipe 의존성)
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-dri \
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender-dev \
-    libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
