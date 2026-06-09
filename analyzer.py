@@ -5,9 +5,13 @@ import cv2, math
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
 
+_mp_import = __import__("mediapipe")
 import mediapipe as mp
 
-_mp_pose = mp.solutions.pose
+try:
+    _mp_pose = mp.solutions.pose
+except AttributeError:
+    from mediapipe.python.solutions import pose as _mp_pose
 _PL      = _mp_pose.PoseLandmark
 
 _R = dict(shoulder=_PL.RIGHT_SHOULDER.value, hip=_PL.RIGHT_HIP.value,
